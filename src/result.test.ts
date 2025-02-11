@@ -88,6 +88,18 @@ describe('result', () => {
             assertTrue<TypeEqualityGuard<typeof mapped, Result<never, number>>>();
             expect(mapped.isErr() && mapped.err).toBe(10);
         });
+        test('should andThen ok to both', () => {
+            const val = Result.ok(3);
+            const mapped = val.andThen(i => {
+                if (i % 2 === 0) {
+                    return Result.err(10);
+                } else {
+                    return Result.ok(2);
+                }
+            });
+            assertTrue<TypeEqualityGuard<typeof mapped, Result<number, number>>>();
+            expect(mapped.isOk() && mapped.value).toBe(2);
+        });
     });
 
     describe('all', () => {
@@ -238,12 +250,12 @@ describe('result', () => {
         test('should "or" ok', () => {
             const val = Result.ok(3);
             const val2 = val.or(4);
-            expect(val2.value).toBe(3);
+            expect(val2.isOk() && val2.value).toBe(3);
         });
         test('should "or" err to default', () => {
             const val = Result.err(-1);
             const val2 = val.or(4);
-            expect(val2.value).toBe(4);
+            expect(val2.isOk() && val2.value).toBe(4);
         });
     });
 
@@ -251,17 +263,17 @@ describe('result', () => {
         test('should "orElse" ok', () => {
             const val = Result.ok(3);
             const val2 = val.orElse(() => 4);
-            expect(val2.value).toBe(3);
+            expect(val2.isOk() && val2.value).toBe(3);
         });
         test('should "orElse" err', () => {
             const val = Result.err(-1);
             const val2 = val.orElse(() => 4);
-            expect(val2.value).toBe(4);
+            expect(val2.isOk() && val2.value).toBe(4);
         });
         test('should "orElse" err with parameter', () => {
             const val = Result.err(-1);
             const val2 = val.orElse(e => e + 2);
-            expect(val2.value).toBe(1);
+            expect(val2.isOk() && val2.value).toBe(1);
         });
     });
 
@@ -386,7 +398,8 @@ describe('result', () => {
             }
 
             const test = new TestWithThisBinding();
-            expect(test.classMethod().isOk() && test.classMethod().value).toBe(3);
+            const result = test.classMethod();
+            expect(result.isOk() && result.value).toBe(3);
         });
     });
 
@@ -424,7 +437,7 @@ describe('result', () => {
         test('assertOk on ok', () => {
             const result = Result.ok(3);
             Result.assertOk(result);
-            expect(result.value).toBe(3);
+            expect(result.isOk() && result.value).toBe(3);
         });
         test('assertOk on error should throw', () => {
             const result = Result.err(3);
@@ -433,7 +446,7 @@ describe('result', () => {
         test('assertErr on err', () => {
             const result = Result.err(3);
             Result.assertErr(result);
-            expect(result.err).toBe(3);
+            expect(result.isErr() && result.err).toBe(3);
         });
         test('assertOk on error should throw', () => {
             const result = Result.ok(3);
@@ -493,18 +506,12 @@ describe('result', () => {
             expect(result).toStrictEqual(Result.err(2));
         });
         test('should not pipe or from ok', () => {
-            const result = pipe(
-                Result.ok(3),
-                Result.or(4),
-            );
+            const result = pipe(Result.ok(3), Result.or(4));
             assertTrue<TypeEqualityGuard<typeof result, Result<number, never>>>();
             expect(result).toStrictEqual(Result.ok(3));
         });
         test('should pipe or from err', () => {
-            const result = pipe(
-                Result.err(3),
-                Result.or(4),
-            );
+            const result = pipe(Result.err(3), Result.or(4));
             assertTrue<TypeEqualityGuard<typeof result, Result<number, never>>>();
             expect(result).toStrictEqual(Result.ok(4));
         });
@@ -525,33 +532,27 @@ describe('result', () => {
             expect(result).toStrictEqual(Result.ok(4));
         });
         test('should pipe unwrap', () => {
-            const result = pipe(
-                Result.ok(3),
-                Result.unwrap,
-            );
+            const result = pipe(Result.ok(3), Result.unwrap);
             assertTrue<TypeEqualityGuard<typeof result, number>>();
             expect(result).toStrictEqual(3);
         });
         test('should pipe unwrapOr', () => {
-            const result = pipe(
-                Result.err(3),
-                Result.unwrapOr(4),
-            );
+            const result = pipe(Result.err(3), Result.unwrapOr(4));
             assertTrue<TypeEqualityGuard<typeof result, number>>();
             expect(result).toStrictEqual(4);
         });
         test('should pipe unwrapOrElse from err', () => {
             const result = pipe(
                 Result.err(3),
-                Result.unwrapOrElse(_ => "1"),
+                Result.unwrapOrElse(_ => '1'),
             );
             assertTrue<TypeEqualityGuard<typeof result, string>>();
-            expect(result).toStrictEqual("1");
+            expect(result).toStrictEqual('1');
         });
         test('should not pipe unwrapOrElse from ok', () => {
             const result = pipe(
                 Result.ok(3),
-                Result.unwrapOrElse(_ => "1"),
+                Result.unwrapOrElse(_ => '1'),
             );
             assertTrue<TypeEqualityGuard<typeof result, string | number>>();
             expect(result).toStrictEqual(3);
@@ -577,6 +578,21 @@ describe('result', () => {
             );
             assertTrue<TypeEqualityGuard<typeof result, number>>();
             expect(result).toStrictEqual(4);
+        });
+        test('should pipe andThen into both ok and err', () => {
+            const result = pipe(
+                Result.ok(5),
+                Result.andThen(n => Result.ok(n + 1)),
+                Result.andThen(n => {
+                    if (n % 2 === 0) {
+                        return Result.ok(n);
+                    } else {
+                        return Result.err('error');
+                    }
+                }),
+            );
+            assertTrue<TypeEqualityGuard<typeof result, Result<number, string>>>();
+            expect(result).toStrictEqual(Result.ok(6));
         });
     });
 });

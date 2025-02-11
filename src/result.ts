@@ -18,10 +18,10 @@ type IncludesType<T extends Array<unknown>, S> = {
 export type NeverIfExistingInUnion<T extends Array<unknown>> = IncludesType<T, never> extends true ? never : T;
 
 interface Functions<O, E> {
-    isOk: () => this is Result<O, never>;
-    isErr: () => this is Result<never, E>;
+    isOk: () => this is Ok<O>;
+    isErr: () => this is Err<E>;
     map: <NO>(fn: (value: O) => NO) => Result<NO, E>;
-    andThen: <NO, NE>(fn: (value: O) => Result<NO, NE>) => (Result<NO, E | NE>) ;
+    andThen: <NO, NE>(fn: (value: O) => Result<NO, NE>) => Result<NO, E | NE>;
     mapErr: <NE>(fn: (err: E) => NE) => Result<O, NE>;
     unwrap: () => O;
     unwrapOr: <R1>(def: R1) => O | R1;
@@ -42,7 +42,7 @@ export type Err<E> = {
     readonly err: E;
 } & Functions<never, E>;
 
-export type Result<O, E> = (O extends never ? never : Ok<O>) | (E extends never ? never : Err<E>);
+export type Result<O, E> = Ok<O> | Err<E>;
 export type Success<T extends Result<any, any>> = T extends Ok<infer O> ? O : never;
 export type Failure<T extends Result<any, any>> = T extends Err<infer E> ? E : never;
 
@@ -57,19 +57,13 @@ export interface Match<O, E, R1, R2> {
 
 function map<O, NO>(fn: (value: O) => NO): <E>(data: Result<O, E>) => Result<NO, E> {
     return data => {
-        if (data.isOk()) {
-            return asOk(fn(data.value));
-        }
-        return data;
+        return data.isOk() ? asOk(fn(data.value)) : data;
     };
 }
 
 function andThen<O, NO, E, NE>(fn: (value: O) => Result<NO, NE>): (data: Result<O, E>) => Result<NO, NE | E> {
     return (data: Result<O, E>) => {
-        if (data.isOk()) {
-            return fn(data.value);
-        }
-        return data;
+        return data.isOk() ? fn(data.value) : data;
     };
 }
 
@@ -79,10 +73,7 @@ function match<O, E, R1, R2>(m: Match<O, E, R1, R2>): (data: Result<O, E>) => R1
 
 function mapErr<O, E, NE>(fn: (err: E) => NE): (data: Result<O, E>) => Result<O, NE> {
     return data => {
-        if (data.isErr()) {
-            return asErr(fn(data.err));
-        }
-        return data;
+        return data.isErr() ? asErr(fn(data.err)) : data;
     };
 }
 
@@ -124,16 +115,16 @@ class InternalResult<O, E> implements Functions<O, E> {
         public readonly err: E | undefined,
     ) {}
 
-    isOk(): this is Result<O, never> {
+    isOk(): this is Ok<O> {
         return this._isOk;
     }
 
-    isErr(): this is Result<never, E> {
+    isErr(): this is Err<E> {
         return !this._isOk;
     }
 
     map<NO>(fn: (value: O) => NO): Result<NO, E> {
-        return map(fn)(this as unknown as Result<O, E>);
+        return map<O, NO>(fn)(this as unknown as Result<O, E>);
     }
 
     andThen<NO, NE>(fn: (value: O) => Result<NO, NE>): Result<NO, E | NE> {
@@ -145,27 +136,27 @@ class InternalResult<O, E> implements Functions<O, E> {
     }
 
     unwrap() {
-        return unwrap(this as unknown as Result<O, E>);
+        return unwrap<O, E>(this as unknown as Result<O, E>);
     }
 
     unwrapOr<R1>(def: R1) {
-        return unwrapOr(def)(this as unknown as Result<O, E>);
+        return unwrapOr<R1>(def)(this as unknown as Result<O, E>);
     }
 
     unwrapOrElse<R1>(def: (err: E) => R1) {
-        return unwrapOrElse(def)(this as unknown as Result<O, E>);
+        return unwrapOrElse<E, R1>(def)(this as unknown as Result<O, E>);
     }
 
     or<R1>(def: R1) {
-        return or(def)(this as unknown as Result<O, E>);
+        return or<R1>(def)(this as unknown as Result<O, E>);
     }
 
     orElse<R1>(def: (err: E) => R1) {
-        return orElse(def)(this as unknown as Result<O, E>);
+        return orElse<R1, E>(def)(this as unknown as Result<O, E>);
     }
 
     match<R1, R2>(m: Match<O, E, R1, R2>) {
-        return match(m)(this as unknown as Result<O, E>);
+        return match<O, E, R1, R2>(m)(this as unknown as Result<O, E>);
     }
 
     [Symbol.iterator] = () =>

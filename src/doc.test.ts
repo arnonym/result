@@ -1,5 +1,6 @@
 import { Result } from './result';
 import { expect } from '@jest/globals';
+import { pipe } from './pipe';
 
 type Version = 'one' | 'two';
 
@@ -180,5 +181,20 @@ describe('result', () => {
 
         const anotherHeader = await asyncParseHeader([3, 2, 1]);
         expect(anotherHeader.isErr() && anotherHeader.err.message).toStrictEqual('Invalid version');
+    });
+    test('pipe', () => {
+        const header = [1, 2];
+        const result = pipe(
+            header,
+            parseHeaderLength,
+            Result.andThen(length => {
+                if (header.length !== length) {
+                    return Result.err(new HeaderSizeError());
+                } else {
+                    return Result.ok(length);
+                }
+            }),
+        );
+        expect(result).toStrictEqual(Result.ok(2));
     });
 });

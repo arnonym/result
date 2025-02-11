@@ -167,6 +167,26 @@ async function asyncParseHeader(header: number[]): Promise<Result<[Version, numb
 }
 ```
 
+### Pipe
+
+You can also use `pipe` to build pipelines:
+
+```typescript
+const header = [1, 2];
+const result = pipe(
+    header,
+    parseHeaderLength,
+    Result.andThen(length => {
+        if (header.length !== length) {
+            return Result.err(new HeaderSizeError());
+        } else {
+            return Result.ok(length);
+        }
+    }),
+);
+expect(result).toStrictEqual(Result.ok(2));
+```
+
 ### Convenience functions
 
 There are also some convenience functions to make working with `Result` easier:
