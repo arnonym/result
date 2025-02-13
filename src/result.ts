@@ -102,7 +102,7 @@ function expect<O, E>(message: ExpectMessage<E>): (data: Result<O, E>) => O {
         }
         const m = typeof message === 'function' ? message(data.err) : message;
         throw new Error(m);
-    }
+    };
 }
 
 function unwrapOr<R1>(def: R1): <O, E>(data: Result<O, E>) => O | R1 {
@@ -194,13 +194,13 @@ class InternalResult<O, E> implements Functions<O, E> {
         );
 }
 
-export function assertOk<O, E>(result: Result<O, E>): asserts result is Result<O, never> {
+export function assertOk<O, E>(result: Result<O, E>): asserts result is Ok<O> {
     if (result.isErr()) {
         throw new Error(`Expected Ok, got Err: ${result.err}`);
     }
 }
 
-function assertErr<O, E>(result: Result<O, E>): asserts result is Result<never, E> {
+function assertErr<O, E>(result: Result<O, E>): asserts result is Err<E> {
     if (result.isOk()) {
         throw new Error(`Expected Err, got Ok: ${result.value}`);
     }

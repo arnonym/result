@@ -214,27 +214,27 @@ describe('result', () => {
             const val = Result.err(-1);
             expect(() => {
                 val.unwrap();
-            }).toThrow("-1");
+            }).toThrow('-1');
         });
     });
 
     describe('expect', () => {
         test('should "expect" ok', () => {
             const val = Result.ok(3);
-            const val2 = val.expect("You did it wrong!");
+            const val2 = val.expect('You did it wrong!');
             expect(val2).toBe(3);
         });
         test('should not "expect" err but throw with string', () => {
             const val = Result.err(-1);
             expect(() => {
-                val.expect("You did it wrong!");
-            }).toThrow(new Error("You did it wrong!"));
+                val.expect('You did it wrong!');
+            }).toThrow(new Error('You did it wrong!'));
         });
         test('should not "expect" err but throw with function', () => {
             const val = Result.err(-1);
             expect(() => {
                 val.expect(e => `You did it wrong: ${e}`);
-            }).toThrow(new Error("You did it wrong: -1"));
+            }).toThrow(new Error('You did it wrong: -1'));
         });
     });
 
@@ -248,7 +248,7 @@ describe('result', () => {
             const val = Result.ok(-2);
             expect(() => {
                 val.unwrapErr();
-            }).toThrow("Tried to unwrapErr on value: -2");
+            }).toThrow('Tried to unwrapErr on value: -2');
         });
     });
 
@@ -471,20 +471,20 @@ describe('result', () => {
         test('assertOk on ok', () => {
             const result = Result.ok(3);
             Result.assertOk(result);
-            expect(result.isOk() && result.value).toBe(3);
+            expect(result.value).toBe(3);
         });
         test('assertOk on error should throw', () => {
             const result = Result.err(3);
-            expect(() => Result.assertOk(result)).toThrow("Expected Ok, got Err: 3");
+            expect(() => Result.assertOk(result)).toThrow('Expected Ok, got Err: 3');
         });
         test('assertErr on err', () => {
             const result = Result.err(3);
             Result.assertErr(result);
-            expect(result.isErr() && result.err).toBe(3);
+            expect(result.err).toBe(3);
         });
         test('assertOk on error should throw', () => {
             const result = Result.ok(3);
-            expect(() => Result.assertErr(result)).toThrow("Expected Err, got Ok: 3");
+            expect(() => Result.assertErr(result)).toThrow('Expected Err, got Ok: 3');
         });
     });
 

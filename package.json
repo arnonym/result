@@ -1,6 +1,6 @@
 {
     "name": "@arnonym/result",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "Result type for TypeScript inspired by Rust",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -16,7 +16,7 @@
         "check": "npm run compile && npm run test && npm run lint",
         "format": "prettier --write ."
     },
-    "author": "",
+    "author": "Arne Gellhaus",
     "license": "Apache-2.0",
     "devDependencies": {
         "@eslint/js": "^9.19.0",
