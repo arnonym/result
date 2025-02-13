@@ -4,6 +4,9 @@
     "description": "Result type for TypeScript inspired by Rust",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
+    "repository": {
+        "url": "https://github.com/arnonym/result"
+    },
     "scripts": {
         "build": "rm -rf dist; vite build --mode esm && vite build --mode cjs",
         "publish-npm": "npm publish --access public",
