@@ -214,7 +214,41 @@ describe('result', () => {
             const val = Result.err(-1);
             expect(() => {
                 val.unwrap();
-            }).toThrow();
+            }).toThrow("-1");
+        });
+    });
+
+    describe('expect', () => {
+        test('should "expect" ok', () => {
+            const val = Result.ok(3);
+            const val2 = val.expect("You did it wrong!");
+            expect(val2).toBe(3);
+        });
+        test('should not "expect" err but throw with string', () => {
+            const val = Result.err(-1);
+            expect(() => {
+                val.expect("You did it wrong!");
+            }).toThrow(new Error("You did it wrong!"));
+        });
+        test('should not "expect" err but throw with function', () => {
+            const val = Result.err(-1);
+            expect(() => {
+                val.expect(e => `You did it wrong: ${e}`);
+            }).toThrow(new Error("You did it wrong: -1"));
+        });
+    });
+
+    describe('unwrapErr', () => {
+        test('should "unwrapErr" err', () => {
+            const val = Result.err(3);
+            const val2 = val.unwrapErr();
+            expect(val2).toBe(3);
+        });
+        test('should not "unwrapErr" err but throw', () => {
+            const val = Result.ok(-2);
+            expect(() => {
+                val.unwrapErr();
+            }).toThrow("Tried to unwrapErr on value: -2");
         });
     });
 
@@ -441,7 +475,7 @@ describe('result', () => {
         });
         test('assertOk on error should throw', () => {
             const result = Result.err(3);
-            expect(() => Result.assertOk(result)).toThrow();
+            expect(() => Result.assertOk(result)).toThrow("Expected Ok, got Err: 3");
         });
         test('assertErr on err', () => {
             const result = Result.err(3);
@@ -450,7 +484,7 @@ describe('result', () => {
         });
         test('assertOk on error should throw', () => {
             const result = Result.ok(3);
-            expect(() => Result.assertErr(result)).toThrow();
+            expect(() => Result.assertErr(result)).toThrow("Expected Err, got Ok: 3");
         });
     });
 

@@ -17,6 +17,8 @@ type IncludesType<T extends Array<unknown>, S> = {
 
 export type NeverIfExistingInUnion<T extends Array<unknown>> = IncludesType<T, never> extends true ? never : T;
 
+type ExpectMessage<E> = string | ((err: E) => string);
+
 interface Functions<O, E> {
     isOk: () => this is Ok<O>;
     isErr: () => this is Err<E>;
@@ -24,6 +26,8 @@ interface Functions<O, E> {
     andThen: <NO, NE>(fn: (value: O) => Result<NO, NE>) => Result<NO, E | NE>;
     mapErr: <NE>(fn: (err: E) => NE) => Result<O, NE>;
     unwrap: () => O;
+    unwrapErr: () => E;
+    expect: (message: ExpectMessage<E>) => O;
     unwrapOr: <R1>(def: R1) => O | R1;
     unwrapOrElse: <R1>(def: (err: E) => R1) => O | R1;
     or: <R1>(def: R1) => Result<O | R1, never>;
@@ -81,7 +85,24 @@ function unwrap<O, E>(data: Result<O, E>): O {
     if (data.isOk()) {
         return data.value;
     }
-    throw new Error(`Tried to unwrap error: ${data.err}`);
+    throw data.err;
+}
+
+function unwrapErr<O, E>(data: Result<O, E>): E {
+    if (data.isErr()) {
+        return data.err;
+    }
+    throw new Error(`Tried to unwrapErr on value: ${data.value}`);
+}
+
+function expect<O, E>(message: ExpectMessage<E>): (data: Result<O, E>) => O {
+    return data => {
+        if (data.isOk()) {
+            return data.value;
+        }
+        const m = typeof message === 'function' ? message(data.err) : message;
+        throw new Error(m);
+    }
 }
 
 function unwrapOr<R1>(def: R1): <O, E>(data: Result<O, E>) => O | R1 {
@@ -137,6 +158,14 @@ class InternalResult<O, E> implements Functions<O, E> {
 
     unwrap() {
         return unwrap<O, E>(this as unknown as Result<O, E>);
+    }
+
+    unwrapErr() {
+        return unwrapErr<O, E>(this as unknown as Result<O, E>);
+    }
+
+    expect(message: ExpectMessage<E>) {
+        return expect<O, E>(message)(this as unknown as Result<O, E>);
     }
 
     unwrapOr<R1>(def: R1) {
