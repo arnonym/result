@@ -1,6 +1,6 @@
 {
     "name": "@arnonym/result",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "description": "Result type for TypeScript inspired by Rust",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
