@@ -1,2 +1,2 @@
-export { Result, Match, Ok, Err } from './result';
+export { Result, type Match, type Ok, type Err } from './result';
 export { pipe } from './pipe';

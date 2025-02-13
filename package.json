@@ -1,12 +1,12 @@
 {
     "name": "@arnonym/result",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "Result type for TypeScript inspired by Rust",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "scripts": {
-        "build": "rm -rf dist; npm run check && vite build --mode esm && vite build --mode cjs",
-        "publish-npm": "npm run build && npm publish --access public",
+        "build": "rm -rf dist; vite build --mode esm && vite build --mode cjs",
+        "publish-npm": "npm publish --access public",
         "compile": "tsc --noEmit",
         "test": "jest",
         "lint": "eslint",
