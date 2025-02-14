@@ -185,7 +185,9 @@ describe('result', () => {
             assertTrue<TypeEqualityGuard<typeof val, Result<never, string>>>();
             expect(val.isErr() && val.err).toBe('Something went wrong: 3');
         });
+    });
 
+    describe('match', () => {
         test('should "match" ok', () => {
             const val1 = Result.ok(1);
             const r = val1.match({
