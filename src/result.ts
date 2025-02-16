@@ -230,18 +230,18 @@ function all<
     return asOk(result) as Result<O, never>;
 }
 
-function tryException<T>(fn: () => T): Result<T, unknown> {
+function tryException<T, E = unknown>(fn: () => T): Result<T, E> {
     try {
         return asOk(fn());
     } catch (e) {
-        return asErr(e);
+        return Result.err(e as E);
     }
 }
 
-async function tryPromise<T>(fn: () => Promise<T>): Promise<Result<T, unknown>> {
+async function tryPromise<T, E = unknown>(fn: () => Promise<T>): Promise<Result<T, E>> {
     return fn()
         .then(v => asOk(v))
-        .catch(e => asErr(e));
+        .catch(e => Result.err(e as E));
 }
 
 function handle<Self, E extends GenResult<any, any>, F>(
