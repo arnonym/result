@@ -30,6 +30,7 @@ describe('result', () => {
         });
         test('should create err value', () => {
             const val = Result.err(3);
+            assertTrue<TypeEqualityGuard<typeof val, Result<never, number>>>();
             expect(val.isErr()).toBe(true);
             expect(val.isErr() && val.err).toBe(3);
             expect(val.isOk()).toBe(false);
