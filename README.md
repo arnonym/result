@@ -11,13 +11,13 @@ handle errors compared with exceptions.
 
 #### 1. Hidden Control Flow
 
-- Exceptions disrupt the normal flow of execution, making it harder to understand how a program will behave.
+-   Exceptions disrupt the normal flow of execution, making it harder to understand how a program will behave.
 
-- Code can jump to a completely different part of the program, leading to unexpected behavior.
+-   Code can jump to a completely different part of the program, leading to unexpected behavior.
 
 #### 2. Lack of Type Safety
 
-- Unlike function return types, exceptions are untyped in TypeScript.
+-   Unlike function return types, exceptions are untyped in TypeScript.
 
 ## Getting started
 

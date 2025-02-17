@@ -37,12 +37,12 @@ interface Functions<O, E> {
 }
 
 export type Ok<O> = {
-    readonly _ok: true;
+    readonly _isOk: true;
     readonly value: O;
 } & Functions<O, never>;
 
 export type Err<E> = {
-    readonly _ok: false;
+    readonly _isOk: false;
     readonly err: E;
 } & Functions<never, E>;
 
@@ -129,11 +129,16 @@ function orElse<R1, E>(def: (err: E) => R1): <O>(data: Result<O, E>) => Result<O
     };
 }
 
-class InternalResult<O, E> implements Functions<O, E> {
+class InternalResult<
+    ISOK extends boolean,
+    O extends ISOK extends true ? unknown : never,
+    E extends ISOK extends false ? unknown : never,
+> implements Functions<O, E>
+{
     constructor(
-        private readonly _isOk: boolean,
-        public readonly value: O | undefined,
-        public readonly err: E | undefined,
+        public readonly _isOk: ISOK,
+        public readonly value: ISOK extends true ? O : undefined,
+        public readonly err: ISOK extends false ? E : undefined,
     ) {}
 
     isOk(): this is Ok<O> {
@@ -206,12 +211,12 @@ function assertErr<O, E>(result: Result<O, E>): asserts result is Err<E> {
     }
 }
 
-function asOk<O, E extends never>(value: O): Result<O, E> {
-    return new InternalResult(true, value, undefined) as unknown as Result<O, never>;
+function asOk<O>(value: O): Result<O, never> {
+    return new InternalResult(true, value, undefined);
 }
 
-function asErr<E, O extends never>(err: E): Result<O, E> {
-    return new InternalResult(false, undefined, err) as unknown as Result<never, E>;
+function asErr<E>(err: E): Result<never, E> {
+    return new InternalResult(false, undefined, err);
 }
 
 function all<
