@@ -23,15 +23,15 @@ interface Functions<O, E> {
     isOk: () => this is Ok<O>;
     isErr: () => this is Err<E>;
     map: <NO>(fn: (value: O) => NO) => Result<NO, E>;
-    andThen: <NO, NE>(fn: (value: O) => Result<NO, NE>) => Result<NO, E | NE>;
+    andThen: <F extends Result<any, any>>(fn: (value: O) => F) => Result<Success<F>, E | Failure<F>>;
     mapErr: <NE>(fn: (err: E) => NE) => Result<O, NE>;
     unwrap: () => O;
     unwrapErr: () => E;
     expect: (message: ExpectMessage<E>) => O;
     unwrapOr: <R1>(def: R1) => O | R1;
     unwrapOrElse: <R1>(def: (err: E) => R1) => O | R1;
-    or: <R1>(def: R1) => Result<O | R1, never>;
-    orElse: <R1>(def: (err: E) => R1) => Result<O | R1, never>;
+    or: <R1>(def: R1) => Ok<O | R1>;
+    orElse: <R1>(def: (err: E) => R1) => Ok<O | R1>;
     match: <R1, R2>(m: Match<O, E, R1, R2>) => R1 | R2;
     [Symbol.iterator](): Iterator<GenResult<O, E>, GenSuccess<GenResult<O, E>>>;
 }
@@ -46,7 +46,10 @@ export type Err<E> = {
     readonly err: E;
 } & Functions<never, E>;
 
-export type Result<O, E> = Ok<O> | Err<E>;
+//export type Result<O, E> = [E] extends [never] ? Ok<O> : [O] extends [never] ? Err<E> : Ok<O> | Err<E>;
+export type Result<O, E> = [O] extends [never] ? Err<E> : [E] extends [never] ? Ok<O> : Ok<O> | Err<E>;
+//export type Result<O, E> = Ok<O> | Err<E>;
+
 export type Success<T extends Result<any, any>> = T extends Ok<infer O> ? O : never;
 export type Failure<T extends Result<any, any>> = T extends Err<infer E> ? E : never;
 
@@ -59,15 +62,24 @@ export interface Match<O, E, R1, R2> {
     err(error: E): R2;
 }
 
-function map<O, NO>(fn: (value: O) => NO): <E>(data: Result<O, E>) => Result<NO, E> {
+function map<O, NO, E>(fn: (value: O) => NO): (data: Result<O, E>) => Result<NO, E> {
     return data => {
-        return data.isOk() ? asOk(fn(data.value)) : data;
+        if (data.isOk()) {
+            return asOk(fn(data.value)) as Result<NO, E>;
+        } else {
+            return data as unknown as Result<NO, E>;
+        }
     };
 }
 
-function andThen<O, NO, E, NE>(fn: (value: O) => Result<NO, NE>): (data: Result<O, E>) => Result<NO, NE | E> {
+function andThen<O, E, F extends Result<any, any>>(
+    fn: (value: O) => F,
+): (data: Result<O, E>) => Result<Success<F>, E | Failure<F>> {
     return (data: Result<O, E>) => {
-        return data.isOk() ? fn(data.value) : data;
+        if (data.isOk()) {
+            return fn(data.value) as unknown as Result<Success<F>, E | Failure<F>>;
+        }
+        return data as unknown as Result<Success<F>, E | Failure<F>>;
     };
 }
 
@@ -77,7 +89,11 @@ function match<O, E, R1, R2>(m: Match<O, E, R1, R2>): (data: Result<O, E>) => R1
 
 function mapErr<O, E, NE>(fn: (err: E) => NE): (data: Result<O, E>) => Result<O, NE> {
     return data => {
-        return data.isErr() ? asErr(fn(data.err)) : data;
+        if (data.isErr()) {
+            return asErr(fn(data.err)) as Result<O, NE>;
+        } else {
+            return data as unknown as Result<O, NE>;
+        }
     };
 }
 
@@ -117,28 +133,28 @@ function unwrapOrElse<E, R1>(def: (err: E) => R1): <O>(data: Result<O, E>) => O 
     };
 }
 
-function or<R1>(def: R1): <O, E>(data: Result<O, E>) => Result<O | R1, never> {
+function or<R1>(def: R1): <O, E>(data: Result<O, E>) => Ok<O | R1> {
     return data => {
         return data.isOk() ? data : asOk(def);
     };
 }
 
-function orElse<R1, E>(def: (err: E) => R1): <O>(data: Result<O, E>) => Result<O | R1, never> {
+function orElse<R1, E>(def: (err: E) => R1): <O>(data: Result<O, E>) => Ok<O | R1> {
     return data => {
         return data.isOk() ? data : asOk(def(data.err));
     };
 }
 
 class InternalResult<
-    ISOK extends boolean,
-    O extends ISOK extends true ? unknown : never,
-    E extends ISOK extends false ? unknown : never,
+    IS_OK extends boolean,
+    O extends IS_OK extends true ? unknown : never,
+    E extends IS_OK extends false ? unknown : never,
 > implements Functions<O, E>
 {
     constructor(
-        public readonly _isOk: ISOK,
-        public readonly value: ISOK extends true ? O : undefined,
-        public readonly err: ISOK extends false ? E : undefined,
+        public readonly _isOk: IS_OK,
+        public readonly value: IS_OK extends true ? O : undefined,
+        public readonly err: IS_OK extends false ? E : undefined,
     ) {}
 
     isOk(): this is Ok<O> {
@@ -150,11 +166,11 @@ class InternalResult<
     }
 
     map<NO>(fn: (value: O) => NO): Result<NO, E> {
-        return map<O, NO>(fn)(this as unknown as Result<O, E>);
+        return map<O, NO, E>(fn)(this as unknown as Result<O, E>);
     }
 
-    andThen<NO, NE>(fn: (value: O) => Result<NO, NE>): Result<NO, E | NE> {
-        return andThen<O, NO, E, NE>(fn)(this as unknown as Result<O, E>);
+    andThen<F extends Result<any, any>>(fn: (value: O) => F): Result<Success<F>, E | Failure<F>> {
+        return andThen<O, E, F>(fn)(this as unknown as Result<O, E>);
     }
 
     mapErr<NE>(fn: (err: E) => NE) {
@@ -199,23 +215,23 @@ class InternalResult<
         );
 }
 
-export function assertOk<O, E>(result: Result<O, E>): asserts result is Ok<O> {
-    if (result.isErr()) {
+export function assertOk<O, E>(result: Ok<O> | Err<E>): asserts result is Ok<O> {
+    if (!result._isOk) {
         throw new Error(`Expected Ok, got Err: ${result.err}`);
     }
 }
 
-function assertErr<O, E>(result: Result<O, E>): asserts result is Err<E> {
-    if (result.isOk()) {
+export function assertErr<O, E>(result: Ok<O> | Err<E>): asserts result is Err<E> {
+    if (result._isOk) {
         throw new Error(`Expected Err, got Ok: ${result.value}`);
     }
 }
 
-function asOk<O>(value: O): Result<O, never> {
+function asOk<O>(value: O): Ok<O> {
     return new InternalResult(true, value, undefined);
 }
 
-function asErr<E>(err: E): Result<never, E> {
+function asErr<E>(err: E): Err<E> {
     return new InternalResult(false, undefined, err);
 }
 
@@ -230,14 +246,14 @@ function all<
             result.push(item.value);
             continue;
         }
-        return item as Result<never, E>;
+        return item as Result<O, E>;
     }
-    return asOk(result) as Result<O, never>;
+    return asOk(result) as Result<O, E>;
 }
 
 function tryException<T>(fn: () => T): Result<T, unknown> {
     try {
-        return asOk(fn());
+        return asOk(fn()) as Result<T, unknown>;
     } catch (e) {
         return asErr(e);
     }
@@ -245,8 +261,8 @@ function tryException<T>(fn: () => T): Result<T, unknown> {
 
 async function tryPromise<T>(fn: () => Promise<T>): Promise<Result<T, unknown>> {
     return fn()
-        .then(v => asOk(v))
-        .catch(e => asErr(e));
+        .then(v => asOk(v) as Result<T, unknown>)
+        .catch(e => asErr(e) as Result<T, unknown>);
 }
 
 function handle<Self, E extends GenResult<any, any>, F>(
@@ -257,11 +273,11 @@ function handle<Self, E extends GenResult<any, any>, F>(
     let current = iter.next();
     while (current.done !== true) {
         if ((current.value as Result<any, any>).isErr()) {
-            return current.value as unknown as Result<never, GenFailure<E>>;
+            return current.value as unknown as Result<F, GenFailure<E>>;
         }
         current = iter.next((current.value as Ok<any>).value);
     }
-    return asOk(current.value) as unknown as Result<F, never>;
+    return asOk(current.value) as Result<F, GenFailure<E>>;
 }
 
 async function handleAsync<Self, E extends GenResult<any, any>, F>(
@@ -272,11 +288,11 @@ async function handleAsync<Self, E extends GenResult<any, any>, F>(
     let current = await iter.next();
     while (current.done !== true) {
         if ((current.value as Result<any, any>).isErr()) {
-            return current.value as unknown as Result<never, GenFailure<E>>;
+            return current.value as unknown as Result<F, GenFailure<E>>;
         }
         current = await iter.next((current.value as Ok<any>).value);
     }
-    return asOk(current.value) as unknown as Result<F, never>;
+    return asOk(current.value) as Result<F, GenFailure<E>>;
 }
 
 export const Result: {

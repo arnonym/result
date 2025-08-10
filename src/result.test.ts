@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // noinspection ES6RedundantAwait
 
-import { Failure, GetErrors, GetOkays, NeverIfExistingInUnion, Ok, Result, Success } from './result';
+import { Err, Failure, GetErrors, GetOkays, NeverIfExistingInUnion, Ok, Result, Success } from './result';
 import { pipe } from './pipe';
 
 function assertTrue<T extends true>() {}
@@ -34,6 +34,39 @@ describe('result', () => {
             expect(val.isErr()).toBe(true);
             expect(val.isErr() && val.err).toBe(3);
             expect(val.isOk()).toBe(false);
+        });
+    });
+
+    describe('Result compatibility with Ok and Err', () => {
+        test('Result with Err never is the same as Ok', () => {
+            assertTrue<TypeEqualityGuard<Result<number, never>, Ok<number>>>();
+        });
+        test('Result with Ok never is the same as Err', () => {
+            assertTrue<TypeEqualityGuard<Result<never, number>, Err<number>>>();
+        });
+        test('Result with both Ok and Err is same as Result', () => {
+            assertTrue<TypeEqualityGuard<Ok<string> | Err<number>, Result<string, number>>>();
+        });
+    });
+
+    describe('should not broaden types unnecessarily', () => {
+        test('should not broaden types unnecessarily for ok', () => {
+            function testFunction(): Ok<'ok'> {
+                return Result.ok('ok');
+            }
+        });
+        test('should not broaden types unnecessarily for err', () => {
+            function testFunction(): Err<'fail'> {
+                return Result.err('fail');
+            }
+        });
+        test('should not broaden types unnecessarily for mixed usage', () => {
+            function testFunction(): Result<'ok', 'fail'> {
+                if (1 + 1 == 2) {
+                    return Result.err('fail');
+                }
+                return Result.ok('ok');
+            }
         });
     });
 
@@ -89,7 +122,19 @@ describe('result', () => {
             assertTrue<TypeEqualityGuard<typeof mapped, Result<never, number>>>();
             expect(mapped.isErr() && mapped.err).toBe(10);
         });
-        test('should andThen ok to both', () => {
+        test('should andThen ok to both okays', () => {
+            const val = Result.ok(3);
+            const mapped = val.andThen(i => {
+                if (i % 2 === 0) {
+                    return Result.ok('hello');
+                } else {
+                    return Result.ok(2);
+                }
+            });
+            assertTrue<TypeEqualityGuard<typeof mapped, Result<number | string, never>>>();
+            expect(mapped.isOk() && mapped.value).toBe(2);
+        });
+        test('should andThen ok to both error and okay', () => {
             const val = Result.ok(3);
             const mapped = val.andThen(i => {
                 if (i % 2 === 0) {
@@ -100,6 +145,34 @@ describe('result', () => {
             });
             assertTrue<TypeEqualityGuard<typeof mapped, Result<number, number>>>();
             expect(mapped.isOk() && mapped.value).toBe(2);
+        });
+        test('should andThen ok to both errors', () => {
+            const val = Result.ok(3);
+            const mapped = val.andThen(i => {
+                if (i % 2 === 0) {
+                    return Result.err(10);
+                } else {
+                    return Result.err('yes');
+                }
+            });
+            assertTrue<TypeEqualityGuard<typeof mapped, Result<never, number | string>>>();
+            expect(mapped.isErr() && mapped.err).toBe('yes');
+        });
+        test('should andThen very complex case', () => {
+            const val = Result.ok(3);
+            const mapped = val.andThen(i => {
+                if (i % 5 === 0) {
+                    return Result.err('something');
+                } else if (i % 3 === 0) {
+                    return Result.err(10);
+                } else if (i % 2 === 0) {
+                    return Result.ok(Symbol(2));
+                } else {
+                    return Result.ok({ value: 2 });
+                }
+            });
+            assertTrue<TypeEqualityGuard<typeof mapped, Result<symbol | { value: number }, number | string>>>();
+            expect(mapped.isErr() && mapped.err).toBe(10);
         });
     });
 
